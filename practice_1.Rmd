@@ -6,31 +6,291 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-```{r}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 library(here)
 source(here('lib','get_lib.R'))
+```
+
+# Practice data analysis
+
+## Wk 1 practice
+
+### How to create amtrix and vector in R
+
+$$\begin{aligned}
+\mathbb{A}\cdot\vec{x} = \vec{b}
+\end{aligned}$$
+
+$$\begin{aligned}
+\vec{v}
+\end{aligned}$$
+
+```{r}
+a1 <- matrix(c(3, 0, -1, -5, 2, 4), nrow = 1, byrow = T)
+print(a1)
+```
+
+```{r}
+a2 <- matrix(c(3, 0, -1, 5, 2, 4), nrow = 1, byrow = T)
+
+A <- rbind(a1, a2)
+print(A)
+```
+
+```{r}
+x <- c(1, 2, 3, 4, 5, 6)
+x
+b <- x/Norm(x)
+Norm(b)
+A%*%x
+```
+
+$$\begin{aligned}
+\mathbb{B}\cdot\vec{x}_B + \mathbb{N}\cdot\vec{x}_N = \mathbb{A}\cdot\vec{x}
+\end{aligned}$$
+
+### Creating saple vector
+
+```{r}
+#randomly selets number
+a <- sample(-5:5, replace = TRUE, 12)
+a
+length(a)
+A <- matrix(a, ncol = 4, byrow = TRUE)
+A
+```
+
+###Plotting
+####squirrels
+```{r}
+squirrel_subset <- fread(here('data/squirrels_subset.csv'))
+
+ggplot(data = squirrel_subset) + aes(x = long, y = lat) + geom_point()
+```
+
+#### Color by age
+
+```{r}
+ggplot(data = squirrel_subset) + aes(x = long, y = lat, color = age) + geom_point()
+```
+
+#### Make Every Point blue
+```{r}
+ggplot(data = squirrel_subset) + aes(x = long, y = lat) + geom_point(color = 'blue')
+```
+
+#### Color by the Fur Color
+```{r}
+ggplot(data = squirrel_subset) + aes(x = long, y = lat, color = primary_fur_color) + geom_point()
+```
+
+#### Put onto non-euclidian space
+```{r}
+ggplot(data = squirrel_subset) + aes(x = long, y = lat, color = primary_fur_color) + coord_quickmap() + geom_point()
+```
+
+```{r}
+squirrel_subset_by_color <- squirrel_subset %>%  group_by(primary_fur_color) %>%  summarise(count_by_color = n())
+
+plot_col <- squirrel_subset_by_color %>%  ggplot() + aes(x = primary_fur_color, y = count_by_color) + geom_col()
+
+plot_bar <- squirrel_subset %>%  ggplot() + aes(x = primary_fur_color) + geom_bar()
+
+squirrel_subset_by_color <- squirrel_subset %>% mutate(date_f = as.Date.character(date, format = '%m%d%Y')) %>% group_by(date_f, primary_fur_color) %>%  summarise(count_of_squirrels = n())
+```
+
+```{r}
+squirrel_subset_by_color %>%  ggplot() + aes(x = date_f, y = count_of_squirrels, color = primary_fur_color) + stat_smooth(se = FALSE) + labs(title = 'Decreasing Count of Squirrels Through Time', subtitle = 'Moving average smoother estimate', x = 'Date of Observation', y = 'Count of Squirrels', color = 'Primary Fur Color') + coord_cartesian(xlim = c(as.Date.character('2018-10-08'), as.Date.character('2018-10-15')))
+```
+
+
+## Wk 2 practice
+
+### Creating interactive plot
+```{r}
+hprice1 <- wooldridge::hprice1
+glimpse(hprice1)
+
+p1 <- hprice1 %>% ggplot(aes(x = colonial, y = price)) + geom_point()
+p1
+
+ggplotly(p1)
+```
+
+### filter 관련
+```{r}
+agencies <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-15/agencies.csv')
+glimpse(agencies)
+```
+
+```{r}
+launches <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-15/launches.csv')
+
+glimpse(launches)
+```
+
+```{r}
+filter(launches, launch_year < 1968, launch_year > 1966, agency == 'US')
+```
+
+```{r}
+launches %>%
+  filter(launch_year < 1968) %>% 
+  filter(launch_year > 1966) %>% 
+  filter(agency == 'US' | agency == 'SU')
+```
+
+### arrange()
+```{r}
+agencies %>% 
+  arrange(desc(state_code))
+```
+
+### select()
+```{r}
+launches %>% 
+  select(contains('agency'), contains('launch')) %>% 
+  view()
+```
+
+### summarise()
+```{r}
+agencies %>% 
+  summarize(
+    average_launches = mean(count),
+    var_launches = var(count),
+    number_of_agencies = length(unique(agencies)),
+    count_log = log(count)
+  ) %>%  head()
+```
+
+### mutate()
+```{r}
+agencies %>% 
+  mutate(count_log = log(count)) %>%  head() %>% 
+  select(contains('count'))
+```
+
+## Wk 3 practice
+```{r}
+d <- data.frame(
+  id = 1:15,
+  individual = rep(LETTERS[1:5], each = 3),
+  group = rep(c('Group One', 'Group Two'), times = c(9, 6)), time = rep(1:3, times = 5), value = (1:15)^2
+)
+d
+
+d <- d %>%
+  arrange(sample(id))
+d %>%  group_by(group, time) %>% 
+  summarise(
+    value_average = mean(value)
+  )
+```
+
+### how to read data from github
+```{r}
+agencies <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-15/agencies.csv')
+launches <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-01-15/launches.csv')
+
+launches %>% 
+  group_by(state_code, launch_year) %>% 
+  summarise(total_launches = n()) %>% 
+  arrange(desc(total_launches))
+```
+
+### Graphing
+#### patchwork and here
+```{r}
+squirrel_subset <- fread(here("data", "squirrels_subset.csv"))
+```
+
+```{r}
+squirrel_scatter <- squirrel_subset %>% 
+  ggplot() +
+  aes(x = long, y = lat) +
+  geom_point()
+squirrel_scatter
+head(squirrel_subset)
+
+squirrel_long_histogram <- squirrel_subset %>% 
+  ggplot() +
+  aes(x = long) +
+  geom_histogram()
+squirrel_long_histogram
+squirrel_long_density <- squirrel_subset %>%
+  ggplot() +
+  aes(x = long) +
+  geom_density()
+squirrel_long_density
+
+squirrel_long_histogram / squirrel_long_density
+```
+
+#### change the format of the data
+```{r}
+squirrel_subset <- squirrel_subset %>% 
+  mutate(
+    date_f = as.Date.character(date, format = '%m%d%Y')
+)
+```
+
+```{r}
+squirrel_subset_by_color <- squirrel_subset %>% 
+  group_by(primary_fur_color) %>% 
+  summarise(count_by_color = n())
+```
+
+```{r}
+squirrel_subset %>% 
+  ggplot() +
+  aes(x = date_f) +
+  geom_histogram() +
+  facet_wrap(vars(primary_fur_color), nrow = 3)
+```
+
+```{r}
+plot_col <- squirrel_subset_by_color %>% 
+  ggplot() +
+  aes(x = primary_fur_color, y = count_by_color) + 
+  geom_col()
+
+plot_bar <- squirrel_subset %>%
+  ggplot() +
+  aes(x = primary_fur_color) +
+  geom_bar()
+
+plot_col | plot_bar
+```
+
+## Wk 4 practice
+### Invertible Linear Transformation
+
+$$\begin{aligned}
+\mathbb{A}\vec{x} = \vec{b}
+\end{aligned}$$
+
+$$\begin{aligned}
+\mathbb{A}^{-1}\vec{b} = \vec{x}
+\end{aligned}$$
+
+```{r}
+r1 <- c(0, 1, -4, 5)
+r2 <- c(2, -3, 2, 7)
+r3 <- c(5, -8, 9, 10)
+r4 <- c(15, -18, 19, 10)
+A <- rbind(r1, r2, r3, r4)
+print(A)
+
+Rank(A)
+
+rref(A)
+
+x <- c(3, 6, 9)
+x
+T <- A
+T
+
+b <- T%*%x
 ```
 
